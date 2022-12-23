@@ -1,13 +1,19 @@
 import pandas as pd
 import pandas_ta as ta
+import os
+import pickle
 
+from collections import namedtuple
+
+
+from argparse import ArgumentParser
 from math import floor
 from datetime import datetime, timedelta, date, timezone
 from telegrambot import telegram_bot_keys, TelegramBot
 from alpaca.data.requests import StockBarsRequest, StockLatestBarRequest
 from alpaca.data.timeframe import TimeFrameUnit
 from alpaca.data.timeframe import TimeFrame
-from alpaca.trading.requests import MarketOrderRequest, GetCalendarRequest, TakeProfitRequest, StopLossRequest
+from alpaca.trading.requests import MarketOrderRequest, GetCalendarRequest
 from alpaca.trading.enums import OrderSide, TimeInForce, OrderClass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.trading.client import TradingClient
@@ -16,7 +22,7 @@ from alpaca.common.exceptions import APIError
 from typing import List, Union
 
 from utils import filter_trading_day, check_if_market_open, get_market_time
-from load_api_keys import alpaca_paper_trading_keys, load_alpaca_paper_trading_keys
+from load_api_keys import load_alpaca_paper_trading_keys, load_telegram_bot_keys, telegram_bot_keys, alpaca_paper_trading_keys
 
 class StocksRSILongShortStrategy:
 
@@ -79,7 +85,7 @@ class StocksRSILongShortStrategy:
         return rsi_series.iloc[-1]
 
     def _get_latest_bar(self):
-        latest_bar_request_params = StockLatestBarRequest(symbol_or_symbols='TSLA')
+        latest_bar_request_params = StockLatestBarRequest(symbol_or_symbols=self.symbol)
         latest_bar = self.historical_data_client.get_stock_latest_bar(request_params=latest_bar_request_params)
 
         return latest_bar[self.symbol]
@@ -158,6 +164,11 @@ class StocksRSILongShortStrategy:
         else:
             return False
 
+    def create_filename(self) -> str:
+
+        string = f"RSI_long_short_{self.symbol}_rsi_high_{self.rsi_overbought_level}_rsi_low_{self.rsi_oversold_level}.pkl"
+
+        return string
 
     def run(self):
         """Runs the strategy. The flow goes like this
@@ -234,6 +245,58 @@ class StocksRSILongShortStrategy:
                     quantity=current_position.qty,
                     message="Closing out positions since the market is closed!"
                 )
+
+
+if __name__ == "__main__":
+    # parser = ArgumentParser()
+    # parser.add_argument('-s', '--symbol')
+    # parser.add_argument('-c', '--capital')
+    # parser.add_argument('-t', '--timeframe')
+
+
+    # args = parser.parse_args()
+
+    # print(args.symbol)
+    # print(args.capital)
+
+    paper_trading_keys = load_alpaca_paper_trading_keys(dotenv_path=r'C:\Users\srerr\Documents\Projects\PersonalProjects\stonks\alpaca\.env')
+    telegram_keys = load_telegram_bot_keys(dotenv_path=r'C:\Users\srerr\Documents\Projects\PersonalProjects\stonks\alpaca\.env')
+
+    symbol = 'AAPL'
+    capital = 1000
+    timeframe = TimeFrame(amount = 2, unit = TimeFrameUnit.Minute)
+    rsi_overbought_level = 70
+    rsi_oversold_level = 30
+    stop_loss_sigma = 0.5
+    take_profit_sigma = 0.5
+    timeout = pd.Timedelta(hours = 1)
+
+    rsi_strategy = StocksRSILongShortStrategy(
+        symbol=symbol,
+        capital=capital,
+        timeframe=timeframe,
+        rsi_overbought_level=rsi_overbought_level,
+        rsi_oversold_level=rsi_oversold_level,
+        stop_loss_sigma=stop_loss_sigma,
+        take_profit_sigma=take_profit_sigma,
+        timeout = timeout,
+        telegram_keys=telegram_keys,
+        alpaca_paper_trading_keys=paper_trading_keys
+    )
+
+    filename = rsi_strategy.create_filename()
+    filepath = f'livestrats/{filename}'
+
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            rsi_strategy = pickle.load(file = f)
+
+    # Running the strategy
+    rsi_strategy.run()
+
+    # Saving the strategy back down to our folder
+    with open(filepath, 'w') as f:
+        pickle.dump(rsi_strategy, f)
 
 
 
