@@ -1,5 +1,4 @@
 from alpaca.trading.models import Position, Order
-from uuid import UUID
 from dataclasses import dataclass, asdict
 from typing import List
 
