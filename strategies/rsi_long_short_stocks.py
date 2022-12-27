@@ -9,7 +9,7 @@ from collections import namedtuple
 from argparse import ArgumentParser
 from math import floor
 from datetime import datetime, timedelta, date, timezone
-from telegrambot import telegram_bot_keys, TelegramBot
+from telegrambot import TelegramBot, TelegramBotKeys
 from alpaca.data.requests import StockBarsRequest, StockLatestBarRequest
 from alpaca.data.timeframe import TimeFrameUnit
 from alpaca.data.timeframe import TimeFrame
@@ -22,13 +22,13 @@ from alpaca.common.exceptions import APIError
 from typing import List, Union
 
 from utils import filter_trading_day, check_if_market_open, get_market_time
-from load_api_keys import load_alpaca_paper_trading_keys, load_telegram_bot_keys, telegram_bot_keys, alpaca_paper_trading_keys
+from load_api_keys import load_alpaca_paper_trading_keys, load_telegram_bot_keys, TelegramBotKeys, AlpacaPaperTradingKeys
 
 class StocksRSILongShortStrategy:
 
     def __init__(self, symbol: str, capital: float, timeframe: TimeFrame, rsi_overbought_level: int,
     rsi_oversold_level: int, stop_loss_sigma: float, take_profit_sigma: float, timeout: pd.Timedelta,
-    telegram_keys: telegram_bot_keys, alpaca_paper_trading_keys: alpaca_paper_trading_keys) -> None:
+    telegram_keys: TelegramBotKeys, alpaca_paper_trading_keys: AlpacaPaperTradingKeys) -> None:
 
         self.symbol = symbol
         self.capital = capital
@@ -188,7 +188,7 @@ class StocksRSILongShortStrategy:
                 current_side = current_position.side
                 current_quantity = current_position.qty
 
-                elapsed_time = pd.Timestamp(datetime.now(timezone.utc)) - pd.Timestamp(most_recent_trade.filled_at)
+                elapsed_time = pd.Timestamp(datetime.now(timezone.utc)) - pd.Timestamp(most_recent_trade.created_at)
 
                 if elapsed_time > self.timeout:
                     # In this case we close out positions
@@ -288,14 +288,14 @@ if __name__ == "__main__":
     filepath = f'livestrats/{filename}'
 
     if os.path.exists(filepath):
-        with open(filepath, 'r') as f:
+        with open(filepath, 'rb') as f:
             rsi_strategy = pickle.load(file = f)
 
     # Running the strategy
     rsi_strategy.run()
 
     # Saving the strategy back down to our folder
-    with open(filepath, 'w') as f:
+    with open(filepath, 'wb') as f:
         pickle.dump(rsi_strategy, f)
 
 

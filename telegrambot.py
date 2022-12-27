@@ -1,5 +1,5 @@
 import requests
-from load_api_keys import telegram_bot_keys
+from load_api_keys import TelegramBotKeys
 class TelegramBot:
 
     def __init__(self, bot_token: str, chat_id: int) -> None:
@@ -19,7 +19,7 @@ class TelegramBot:
             print(e)
 
     @classmethod
-    def from_telegram_keys(cls, telegram_keys: telegram_bot_keys):
+    def from_telegram_keys(cls, telegram_keys: TelegramBotKeys):
         bot_token = telegram_keys.bot_token
         chat_id = telegram_keys.chat_id
 
